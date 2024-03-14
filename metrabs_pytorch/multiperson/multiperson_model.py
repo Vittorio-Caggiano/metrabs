@@ -151,8 +151,8 @@ class Pose3dEstimator(torch.nn.Module):
             'bank,bjk->banj', poses2d_flat_normalized, intrinsic_matrix[:, :2, :])
 
         # Arrange the results back into ragged tensors
-        poses3d = torch.split(poses3d_flat, n_box_per_image)
-        poses2d = torch.split(poses2d_flat, n_box_per_image)
+        poses3d = torch.split(poses3d_flat, n_box_per_image.tolist())
+        poses2d = torch.split(poses2d_flat, n_box_per_image.tolist())
         # crops = torch.split(crops_flat, n_box_per_image)
 
         # if suppress_implausible_poses:
@@ -238,7 +238,7 @@ class Pose3dEstimator(torch.nn.Module):
         res = self.crop_model.input_resolution
 
         crops_flat = torch.reshape(crops, (-1, 3, res, res))
-        with torch.autocast(dtype=torch.float16, device_type='cuda'):
+        with torch.autocast(dtype=torch.float16,  device_type='cuda'):
             poses_flat = self.crop_model((crops_flat, new_intrinsic_matrix_flat))
 
         # Unflatten the result
