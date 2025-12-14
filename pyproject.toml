@@ -21,6 +21,7 @@ dependencies = [
   "mediapy",
   "einops",
   "tqdm",
+  "Pillow<10",
 ]
 
 [tool.ruff.lint]
