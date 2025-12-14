@@ -22,9 +22,38 @@ import metrabs_pytorch.models.metrabs as metrabs_pt
 from metrabs_pytorch.multiperson import multiperson_model
 from metrabs_pytorch.util import get_config
 
+curr_dir = osp.dirname(osp.abspath(__file__))
+# check if torch model exists otherwise download it
+MODEL_DIR = curr_dir + "/../../metrabs_eff2l_384px_800k_28ds_pytorch"
+URL = "https://omnomnom.vision.rwth-aachen.de/data/metrabs/metrabs_eff2l_384px_800k_28ds_pytorch.tar.gz"
+
+if not osp.exists(f"{MODEL_DIR}/ckpt.pt"):
+    import shutil
+    import tarfile
+    import tempfile
+    import urllib.request
+
+    os.makedirs(MODEL_DIR, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        archive_path = osp.join(tmp, "model.tar.gz")
+        print(f"Downloading model archive to {archive_path} ...")
+        urllib.request.urlretrieve(URL, archive_path)
+
+        print("Extracting archive...")
+        with tarfile.open(archive_path, "r:gz") as tar:
+            # Extract everything to temp dir
+            tar.extractall(path=tmp)
+
+            # Move contents of the top-level folder to MODEL_DIR
+            top_folder = osp.join(tmp, tar.getmembers()[0].name.split(os.sep)[0])
+            for f in os.listdir(top_folder):
+                shutil.move(osp.join(top_folder, f), MODEL_DIR)
+
+        print(f"Model ready in {MODEL_DIR}")
+
 
 def run_metrabs_video(
-    model_dir: str,
     video_path: str | int,
     skeleton: str = "bml_movi_87",
     device: str = "cuda",
@@ -33,6 +62,7 @@ def run_metrabs_video(
     num_aug: int = 5,
     visualize: bool = True,
     max_frames: int | None = None,
+    model_dir: str = MODEL_DIR,
 ):
     """
     Run Metrabs multiperson pose estimation on a video or webcam.
@@ -194,11 +224,11 @@ def cli_video():
 
     results = list(
         run_metrabs_video(
-            model_dir=args.model_dir,
             video_path=video_source,
             device=device,
             visualize=not args.no_viz,
             max_frames=args.max_frames,
+            model_dir=args.model_dir,
         )
     )
 
