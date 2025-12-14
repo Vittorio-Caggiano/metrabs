@@ -3,7 +3,7 @@ requires = ["flit_core >= 3.4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "metrabs"
+name = "metrabs_pytorch"
 version = "0.1.0"
 authors = [{name = ""}]
 description = "A Python package for human motion tracking"
@@ -16,6 +16,8 @@ dependencies = [
   "ultralytics",
   "av",
   "posepile@git+https://github.com/Vittorio-Caggiano/PosePile.git",
+  "poseviz@git+https://github.com/isarandi/poseviz.git",
+  "cameralib@git+https://github.com/isarandi/cameralib.git",
   "mediapy",
   "einops",
   "tqdm",
