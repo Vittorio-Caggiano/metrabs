@@ -1,0 +1,26 @@
+[build-system]
+requires = ["flit_core >= 3.4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "metrabs"
+version = "0.1.0"
+authors = [{name = ""}]
+description = "A Python package for human motion tracking"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+  # "torch",
+  # "torchvision",
+  "hydra-core",
+  "ultralytics",
+  "av",
+  "posepile@git+https://github.com/Vittorio-Caggiano/PosePile.git",
+  "mediapy",
+  "einops",
+  "tqdm",
+]
+
+[tool.ruff.lint]
+ignore = ["C901", "E501", "E741", "F402", "F823" ]
+select = ["C", "E", "F", "I", "W"]
