@@ -21,7 +21,7 @@ dependencies = [
   "mediapy",
   "einops",
   "tqdm",
-  "Pillow",
+  "Pillow>=10.0,<12",
   "matplotlib",
 ]
 
