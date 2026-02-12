@@ -13,7 +13,6 @@ import cameralib
 import cv2
 import numpy as np
 import posepile.joint_info
-import poseviz
 import simplepyutils as spu
 import torch
 
@@ -106,6 +105,7 @@ def run_metrabs_video(
             viz_ctx = nullcontext()
         else:
             try:
+                import poseviz
                 viz_ctx = poseviz.PoseViz(joint_names, joint_edges, paused=False)
             except (OSError, ImportError) as e:
                 print(
