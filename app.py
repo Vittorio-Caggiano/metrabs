@@ -20,52 +20,23 @@ import cameralib
 import cv2
 import gradio as gr
 import numpy as np
-import posepile.joint_info
-import simplepyutils as spu
 import torch
 
-import metrabs_pytorch.backbones.efficientnet as effnet_pt
-import metrabs_pytorch.models.metrabs as metrabs_pt
-from metrabs_pytorch.multiperson import multiperson_model
+from metrabs_pytorch.scripts.run_video import (
+    MODEL_DIR,
+    _ensure_model_downloaded,
+    load_multiperson_model,
+)
 from metrabs_pytorch.scripts.viz_matplotlib import render_pose_result
 from metrabs_pytorch.util import get_config
 
 # ---------------------------------------------------------------------------
 # Model setup
 # ---------------------------------------------------------------------------
-curr_dir = osp.dirname(osp.abspath(__file__))
-MODEL_DIR = osp.join(curr_dir, "metrabs_eff2l_384px_800k_28ds_pytorch")
-MODEL_URL = (
-    "https://omnomnom.vision.rwth-aachen.de/data/metrabs/"
-    "metrabs_eff2l_384px_800k_28ds_pytorch.tar.gz"
-)
-
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Global model reference (loaded once)
 _model = None
-
-
-def _ensure_model_downloaded():
-    """Download and extract the pretrained model if not already present."""
-    if osp.exists(osp.join(MODEL_DIR, "ckpt.pt")):
-        return
-    import shutil
-    import tarfile
-    import urllib.request
-
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    with tempfile.TemporaryDirectory() as tmp:
-        archive_path = osp.join(tmp, "model.tar.gz")
-        print(f"Downloading model archive to {archive_path} ...")
-        urllib.request.urlretrieve(MODEL_URL, archive_path)
-        print("Extracting archive...")
-        with tarfile.open(archive_path, "r:gz") as tar:
-            tar.extractall(path=tmp)
-            top_folder = osp.join(tmp, tar.getmembers()[0].name.split(os.sep)[0])
-            for f in os.listdir(top_folder):
-                shutil.move(osp.join(top_folder, f), MODEL_DIR)
-    print(f"Model ready in {MODEL_DIR}")
 
 
 def _load_model():
@@ -74,33 +45,13 @@ def _load_model():
     if _model is not None:
         return _model
 
-    _ensure_model_downloaded()
-    device = torch.device(DEVICE)
     model_dir = osp.abspath(MODEL_DIR)
+    _ensure_model_downloaded(model_dir)
+    device = torch.device(DEVICE)
     config_path = osp.join(model_dir, "config.yaml")
     cfg = get_config(config_path)
 
-    ji_np = np.load(osp.join(model_dir, "joint_info.npz"))
-    ji = posepile.joint_info.JointInfo(ji_np["joint_names"], ji_np["joint_edges"])
-    backbone_raw = getattr(effnet_pt, f"efficientnet_v2_{cfg.efficientnet_size}")()
-    preproc_layer = effnet_pt.PreprocLayer()
-    backbone = torch.nn.Sequential(preproc_layer, backbone_raw.features)
-    model_pt = metrabs_pt.Metrabs(backbone, ji)
-    model_pt.eval()
-
-    inp = torch.zeros((1, 3, cfg.proc_side, cfg.proc_side), dtype=torch.float32)
-    intr = torch.eye(3, dtype=torch.float32)[np.newaxis]
-    model_pt((inp, intr))
-    model_pt.load_state_dict(torch.load(osp.join(model_dir, "ckpt.pt"), map_location=device))
-    model_pt = model_pt.to(device)
-
-    skeleton_infos = spu.load_pickle(osp.join(model_dir, "skeleton_infos.pkl"))
-    joint_transform_matrix = np.load(osp.join(model_dir, "joint_transform_matrix.npy"))
-
-    with torch.device(device):
-        _model = multiperson_model.Pose3dEstimator(
-            model_pt, skeleton_infos, joint_transform_matrix
-        )
+    _model = load_multiperson_model(model_dir=model_dir, cfg=cfg, device=device)
     return _model
 
 

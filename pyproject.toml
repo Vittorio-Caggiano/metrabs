@@ -10,11 +10,12 @@ description = "A Python package for human motion tracking"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-  # "torch",
-  # "torchvision",
+  "torch",
+  "torchvision",
   "hydra-core",
   "ultralytics",
   "av",
+  "simplepyutils@git+https://github.com/isarandi/simplepyutils.git",
   "posepile@git+https://github.com/Vittorio-Caggiano/PosePile.git",
   "cameralib@git+https://github.com/isarandi/cameralib.git",
   "mediapy",
