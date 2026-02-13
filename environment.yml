@@ -19,7 +19,6 @@ dependencies:
   - scikit-image
   - scikit-learn
   - tqdm
-  - conda-forge::mayavi
   - conda-forge::ffmpeg-python
   - pip:
     - attrdict
@@ -43,7 +42,9 @@ dependencies:
     - git+https://github.com/isarandi/fleras.git
     - git+https://github.com/isarandi/cameralib.git
     - git+https://github.com/isarandi/boxlib.git
-    - git+https://github.com/isarandi/poseviz.git
+    # poseviz requires mayavi/VTK (not available in headless environments)
+    # Install separately if needed: pip install git+https://github.com/isarandi/poseviz.git
+    # - git+https://github.com/isarandi/poseviz.git
     - git+https://github.com/isarandi/smpl.git
     - git+https://github.com/isarandi/simplepyutils.git
     - git+https://github.com/isarandi/tf-parallel-map.git

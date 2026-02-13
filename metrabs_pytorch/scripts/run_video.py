@@ -13,7 +13,6 @@ import cameralib
 import cv2
 import numpy as np
 import posepile.joint_info
-import poseviz
 import simplepyutils as spu
 import torch
 
@@ -22,18 +21,45 @@ import metrabs_pytorch.models.metrabs as metrabs_pt
 from metrabs_pytorch.multiperson import multiperson_model
 from metrabs_pytorch.util import get_config
 
-curr_dir = osp.dirname(osp.abspath(__file__))
-# check if torch model exists otherwise download it
-MODEL_DIR = curr_dir + "/../../metrabs_eff2l_384px_800k_28ds_pytorch"
+MODEL_NAME = "metrabs_eff2l_384px_800k_28ds_pytorch"
 URL = "https://omnomnom.vision.rwth-aachen.de/data/metrabs/metrabs_eff2l_384px_800k_28ds_pytorch.tar.gz"
 
-if not osp.exists(f"{MODEL_DIR}/ckpt.pt"):
+
+def _default_model_dir():
+    """Return the default model directory.
+
+    Checks (in order):
+    1. ./metrabs_eff2l_384px_800k_28ds_pytorch  (relative to cwd)
+    2. <repo_root>/metrabs_eff2l_384px_800k_28ds_pytorch  (relative to this file)
+    3. ~/.cache/metrabs/metrabs_eff2l_384px_800k_28ds_pytorch  (cache dir)
+    """
+    # Check current working directory first
+    cwd_path = osp.join(os.getcwd(), MODEL_NAME)
+    if osp.exists(osp.join(cwd_path, "ckpt.pt")):
+        return cwd_path
+
+    # Check relative to the script (works for git clones)
+    curr_dir = osp.dirname(osp.abspath(__file__))
+    repo_path = osp.join(curr_dir, "..", "..", MODEL_NAME)
+    if osp.exists(osp.join(repo_path, "ckpt.pt")):
+        return osp.abspath(repo_path)
+
+    # Default to cache directory (works for pip installs)
+    cache_path = osp.join(osp.expanduser("~"), ".cache", "metrabs", MODEL_NAME)
+    return cache_path
+
+
+def _ensure_model_downloaded(model_dir):
+    """Download and extract the pretrained model if not already present."""
+    if osp.exists(osp.join(model_dir, "ckpt.pt")):
+        return
+
     import shutil
     import tarfile
     import tempfile
     import urllib.request
 
-    os.makedirs(MODEL_DIR, exist_ok=True)
+    os.makedirs(model_dir, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:
         archive_path = osp.join(tmp, "model.tar.gz")
@@ -42,15 +68,15 @@ if not osp.exists(f"{MODEL_DIR}/ckpt.pt"):
 
         print("Extracting archive...")
         with tarfile.open(archive_path, "r:gz") as tar:
-            # Extract everything to temp dir
             tar.extractall(path=tmp)
-
-            # Move contents of the top-level folder to MODEL_DIR
             top_folder = osp.join(tmp, tar.getmembers()[0].name.split(os.sep)[0])
-            for f in os.listdir(top_folder):
-                shutil.move(osp.join(top_folder, f), MODEL_DIR)
+            for fn in os.listdir(top_folder):
+                shutil.move(osp.join(top_folder, fn), model_dir)
 
-        print(f"Model ready in {MODEL_DIR}")
+    print(f"Model ready in {model_dir}")
+
+
+MODEL_DIR = _default_model_dir()
 
 
 def run_metrabs_video(
@@ -67,15 +93,31 @@ def run_metrabs_video(
     """
     Run Metrabs multiperson pose estimation on a video or webcam.
 
-    video_path:
-      - str: path to video file
-      - int: webcam index (e.g. 0)
+    This is a **generator** that yields one dict per frame. To collect all
+    results into a list, use::
+
+        results = list(run_metrabs_video("video.mp4", device="cpu", visualize=False))
+
+    Args:
+        video_path: path to video file, or int for webcam index (e.g. 0).
+        skeleton: skeleton convention name.
+        device: "cuda" or "cpu".
+        detector_threshold: YOLO person-detector confidence threshold.
+        max_detections: max number of people to detect per frame.
+        num_aug: number of test-time augmentations.
+        visualize: if True, show poseviz 3D window (requires display).
+        max_frames: stop after this many frames (None = all).
+        model_dir: path to pretrained model directory.
+
+    Yields:
+        dict with keys: frame_idx, frame_bgr, fps, boxes, poses2d, poses3d.
     """
 
     device = torch.device(device)
 
     # Convert model_dir to absolute path
     model_dir = osp.abspath(model_dir)
+    _ensure_model_downloaded(model_dir)
 
     # Load config + model ONCE
     # Convert to absolute path for get_config
@@ -106,6 +148,7 @@ def run_metrabs_video(
             viz_ctx = nullcontext()
         else:
             try:
+                import poseviz
                 viz_ctx = poseviz.PoseViz(joint_names, joint_edges, paused=False)
             except (OSError, ImportError) as e:
                 print(
@@ -194,7 +237,7 @@ def load_crop_model(model_dir: str, cfg, device: torch.device):
     intr = torch.eye(3, dtype=torch.float32)[np.newaxis]
 
     model((inp, intr))
-    model.load_state_dict(torch.load(f"{model_dir}/ckpt.pt"))
+    model.load_state_dict(torch.load(f"{model_dir}/ckpt.pt", map_location=device))
     return model
 
 

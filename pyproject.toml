@@ -10,29 +10,28 @@ description = "A Python package for human motion tracking"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-  # "torch",
-  # "torchvision",
-  #"vtk==9.4.2",
-  #"mayavi==4.8.3",
+  "torch",
+  "torchvision",
   "hydra-core",
   "ultralytics",
   "av",
+  "simplepyutils@git+https://github.com/isarandi/simplepyutils.git",
   "posepile@git+https://github.com/Vittorio-Caggiano/PosePile.git",
-  "poseviz@git+https://github.com/isarandi/poseviz.git",
   "cameralib@git+https://github.com/isarandi/cameralib.git",
   "mediapy",
   "einops",
   "tqdm",
-  "Pillow<10",
+  "Pillow>=10.0,<12",
+  "matplotlib",
 ]
 
-#[tool.uv]
-#no-build-isolation-package = ["mayavi"]
-
-#[[tool.uv.dependency-metadata]]
-#name = "mayavi"
-#version = "4.8.3"
-#requires-dist = ["numpy"]
+[project.optional-dependencies]
+viz = [
+  "poseviz@git+https://github.com/isarandi/poseviz.git",
+]
+gradio = [
+  "gradio>=4.0",
+]
 
 [tool.ruff.lint]
 ignore = ["C901", "E501", "E741", "F402", "F823" ]
